@@ -19,8 +19,8 @@ resource "aws_default_vpc" "default" {
 }
 
 resource "aws_security_group" "conc_sec_group" {
-  name        = "allow-https-ssh-access"
-  description = "Allow http, https and SSH"
+  name        = "${local.common_name_prefix}_allow_https_ssh_access_SG"
+  description = "Allow http, https and SSH for ${local.common_name_prefix}"
   vpc_id      = aws_default_vpc.default.id
 
   ingress {
@@ -48,6 +48,8 @@ resource "aws_security_group" "conc_sec_group" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(local.common_tags, map("Name", "${local.common_name_prefix}-vpc"))
 }
 
 
@@ -93,6 +95,8 @@ resource "aws_instance" "nginx" {
       "sudo service nginx start",
     ]
   }
+
+  tags = merge(local.common_tags, map("Name", "${local.common_name_prefix}-nginx-instance"))
 }
 
 
