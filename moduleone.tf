@@ -2,9 +2,15 @@
 # VARIABLES
 ##################################################################################
 
-variable "aws_access_key" {}
-variable "aws_secret_key" {}
-variable "private_key_path" {}
+variable "aws_access_key" {
+}
+
+variable "aws_secret_key" {
+}
+
+variable "private_key_path" {
+}
+
 variable "key_name" {
   default = "ConcDeploy"
 }
@@ -14,8 +20,8 @@ variable "key_name" {
 ##################################################################################
 
 provider "aws" {
-  access_key = "${var.aws_access_key}"
-  secret_key = "${var.aws_secret_key}"
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
   region     = "us-east-1"
 }
 
@@ -30,52 +36,54 @@ resource "aws_default_vpc" "default" {
 }
 
 resource "aws_security_group" "conc_sec_group" {
-  name = "allow-https-ssh-access"
+  name        = "allow-https-ssh-access"
   description = "Allow http, https and SSH"
-  vpc_id = "${aws_default_vpc.default.id}"
+  vpc_id      = aws_default_vpc.default.id
 
   ingress {
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-    from_port = 443
-    to_port = 443
-    protocol = "tcp"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] 
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 resource "aws_instance" "nginx" {
-  ami           = "ami-c58c1dd3"
-  instance_type = "t2.micro"
-  key_name        = "${var.key_name}"
-  security_groups = ["${aws_security_group.conc_sec_group.name}"]
+  ami             = "ami-c58c1dd3"
+  instance_type   = "t2.micro"
+  key_name        = var.key_name
+  security_groups = [aws_security_group.conc_sec_group.name]
 
   connection {
+    host        = coalesce(self.public_ip, self.private_ip)
+    type        = "ssh"
     user        = "ec2-user"
-    private_key = "${file(var.private_key_path)}"
+    private_key = file(var.private_key_path)
   }
 
   provisioner "remote-exec" {
     inline = [
       "sudo yum install nginx -y",
-      "sudo service nginx start"
+      "sudo service nginx start",
     ]
   }
 }
@@ -85,6 +93,6 @@ resource "aws_instance" "nginx" {
 ##################################################################################
 
 output "aws_instance_public_dns" {
-    value = "${aws_instance.nginx.public_dns}"
+  value = aws_instance.nginx.public_dns
 }
 
