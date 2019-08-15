@@ -4,7 +4,8 @@
 provider "aws" {
   access_key = var.aws_access_key
   secret_key = var.aws_secret_key
-  region     = "us-east-1"
+  region     = "eu-west-2"
+  version    = "~> 2.23.0"
 }
 
 ##################################################################################
@@ -49,11 +50,35 @@ resource "aws_security_group" "conc_sec_group" {
   }
 }
 
+
+data "aws_ami" "bastion_instance_ami_ic" {
+  most_recent = true
+  owners = [
+    "137112412989",
+  ]
+  name_regex = ".*amzn2-ami-hvm-2.0.*"
+
+  filter {
+    name = "architecture"
+    values = [
+      "x86_64",
+    ]
+  }
+
+  filter {
+    name = "virtualization-type"
+    values = [
+      "hvm",
+    ]
+  }
+}
+
 resource "aws_instance" "nginx" {
-  ami             = "ami-c58c1dd3"
-  instance_type   = "t2.micro"
-  key_name        = var.key_name
-  security_groups = [aws_security_group.conc_sec_group.name]
+  ami                         = data.aws_ami.bastion_instance_ami_ic.id
+  instance_type               = "t2.micro"
+  key_name                    = var.key_name
+  security_groups             = [aws_security_group.conc_sec_group.name]
+  associate_public_ip_address = true
 
   connection {
     host        = coalesce(self.public_ip, self.private_ip)
@@ -64,7 +89,7 @@ resource "aws_instance" "nginx" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo yum install nginx -y",
+      "sudo amazon-linux-extras install nginx1.12 -y",
       "sudo service nginx start",
     ]
   }
